@@ -1,0 +1,20 @@
+[
+  {
+    "run_id": "demo_001",
+    "timestamp": "2026-05-16T12:47:37.035236+00:00",
+    "link_loss_injected_at_s": 1778935656.878335,
+    "election_complete_at_s": 1778935657.035051,
+    "convergence_time_ms": 156.7,
+    "elected_leader": "drone_5",
+    "success": true
+  },
+  {
+    "run_id": "demo_002",
+    "timestamp": "2026-05-16T12:56:11.262624+00:00",
+    "link_loss_injected_at_s": 1778936165.057996,
+    "election_complete_at_s": null,
+    "convergence_time_ms": null,
+    "elected_leader": null,
+    "success": false
+  }
+]

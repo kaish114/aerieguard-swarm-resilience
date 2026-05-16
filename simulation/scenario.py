@@ -51,6 +51,11 @@ def run_scenario(inject_after_s: float, run_id: str, operator_pid: int | None = 
     Main scenario logic.
     If operator_pid is None, looks up the operator_node process by name.
     """
+    leader_file = Path("/tmp/swarm_leader.txt")
+    if leader_file.exists():
+        leader_file.unlink()
+        print("[scenario] Cleared stale /tmp/swarm_leader.txt")
+
     print(f"[scenario] Waiting {inject_after_s}s before injecting link loss...")
     time.sleep(inject_after_s)
 
@@ -78,7 +83,6 @@ def run_scenario(inject_after_s: float, run_id: str, operator_pid: int | None = 
 
     election_complete_at = None
     leader = None
-    leader_file = Path("/tmp/swarm_leader.txt")
 
     deadline = time.time() + 6.0
     while time.time() < deadline:

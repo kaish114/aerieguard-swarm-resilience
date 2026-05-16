@@ -10,6 +10,7 @@ BASE_PORT = 5600
 COLLECTION_WINDOW_S = 0.5
 ELECTION_TIMEOUT_S = 3.0
 SOCKET_WARMUP_S = 0.3
+ANNOUNCE_REPEAT_INTERVAL_S = 0.1  # re-broadcast own candidacy to cover slow joiners
 
 
 class Role(Enum):
@@ -137,14 +138,26 @@ class RaftNode:
         battery = self.battery_provider()
         self._drain_queue()
 
-        self._publish({
+        announce_msg = {
             "type": "candidate_announce",
             "term": term,
             "drone_id": self.drone_id,
             "battery_pct": battery,
-        })
+        }
+
+        # Re-broadcast own candidacy throughout the collection window so that
+        # nodes which start their election slightly later still receive it.
+        def _repeat_announce() -> None:
+            deadline = time.time() + COLLECTION_WINDOW_S
+            while time.time() < deadline and not self._stop.is_set():
+                self._publish(announce_msg)
+                time.sleep(ANNOUNCE_REPEAT_INTERVAL_S)
+
+        repeat_thread = threading.Thread(target=_repeat_announce, daemon=True)
+        repeat_thread.start()
 
         peer_announces = self._collect("candidate_announce", COLLECTION_WINDOW_S)
+        repeat_thread.join(timeout=0.2)
         peer_announces = [m for m in peer_announces if m["term"] == term]
 
         all_candidates = [

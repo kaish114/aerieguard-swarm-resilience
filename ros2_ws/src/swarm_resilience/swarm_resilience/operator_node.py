@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import threading
+from pathlib import Path
 
 import rclpy  # type: ignore[import-untyped]
 from rclpy.node import Node  # type: ignore[import-untyped]
@@ -56,6 +57,8 @@ class OperatorNode(Node):
         self.get_logger().info("[operator] OperatorNode started — heartbeat at 2Hz")
 
     def _publish_heartbeat(self) -> None:
+        if Path("/tmp/swarm_jam_flag").exists():
+            return  # EW jamming simulated via dashboard
         self._pub_heartbeat.publish(String(data="hb"))
 
     def destroy_node(self) -> None:
@@ -68,11 +71,14 @@ def main(args=None):
     node = OperatorNode()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, Exception):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        try:
+            rclpy.shutdown()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

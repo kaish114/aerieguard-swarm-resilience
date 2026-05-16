@@ -6,3 +6,8 @@ results/demo_rosbag/
 *.bag
 *.db3
 progress_*.json
+.DS_Store
+.python-version
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/

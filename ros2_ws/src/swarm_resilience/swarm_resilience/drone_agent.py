@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import threading
+import time
 
 import rclpy  # type: ignore[import-untyped]
 from rclpy.node import Node  # type: ignore[import-untyped]
@@ -48,10 +49,21 @@ class DroneAgent(Node):
         timeout_ms = get_timeout_ms(mission)
         min_quorum = get_min_quorum(mission)
 
+        # Simulated battery — different starting levels per paper's criterion.
+        # No real MAVROS in this demo, so we simulate drain (0.12 %/min).
+        # Drone_1 starts highest so it wins early elections; drain makes results
+        # dynamic over longer missions (matches SwarmRAFT battery criterion).
+        _BATTERY_INIT = {"drone_1": 91.0, "drone_2": 78.0, "drone_3": 85.0}
+        _DRAIN_PCT_PER_S = 0.002   # 0.12 %/min
+        self._battery_init = _BATTERY_INIT.get(self._drone_id, 90.0)
+        self._battery_drain = _DRAIN_PCT_PER_S
+        self._start_time = time.monotonic()
+        self._mavros_battery: float | None = None  # set if real MAVROS arrives
+
         self._state = {
             "last_confirmed_waypoint": 0,
             "current_position": {"lat": 0.0, "lon": 0.0, "alt_m": 0.0},
-            "battery_pct": 100.0,
+            "battery_pct": self._battery_init,
             "role": "follower",
         }
         self._state_lock = threading.Lock()
@@ -95,8 +107,10 @@ class DroneAgent(Node):
         self.get_logger().info(f"[{self._drone_id}] DroneAgent started")
 
     def _get_battery(self) -> float:
-        with self._state_lock:
-            return self._state["battery_pct"]
+        if self._mavros_battery is not None:
+            return self._mavros_battery
+        elapsed = time.monotonic() - self._start_time
+        return max(0.0, self._battery_init - elapsed * self._battery_drain)
 
     def _get_state(self):
         with self._state_lock:
@@ -111,8 +125,10 @@ class DroneAgent(Node):
             }
 
     def _on_battery(self, msg: BatteryState) -> None:
+        # Real MAVROS data takes priority over simulation
+        self._mavros_battery = msg.percentage * 100.0
         with self._state_lock:
-            self._state["battery_pct"] = msg.percentage * 100.0
+            self._state["battery_pct"] = self._mavros_battery
 
     def _on_operator_heartbeat(self, _: String) -> None:
         self._hb_monitor.record_heartbeat()
@@ -145,6 +161,7 @@ class DroneAgent(Node):
 
     def _publish_progress(self) -> None:
         state = self._get_state()
+        state["battery_pct"] = round(self._get_battery(), 1)
         msg = String()
         msg.data = json.dumps(state)
         self._pub_progress.publish(msg)
@@ -165,11 +182,14 @@ def main(args=None):
     node = DroneAgent()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, Exception):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        try:
+            rclpy.shutdown()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AerieGuard — Swarm Command</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Courier New',monospace; background:#060b15; color:#00e676; overflow:hidden; height:100vh; }
+
+/* ── Layout ── */
+#map { position:absolute; top:58px; left:360px; right:360px; bottom:0; }
+.panel { position:absolute; top:58px; bottom:0; width:360px; background:rgba(5,10,20,0.98); display:flex; flex-direction:column; overflow:hidden; }
+#left  { left:0;  border-right:1px solid #0d2030; }
+#right { right:0; border-left:1px solid #0d2030;  }
+
+/* ── Top bar ── */
+#topbar {
+  position:absolute; top:0; left:0; right:0; height:58px;
+  background:rgba(5,10,20,0.99); border-bottom:1px solid #0d2030;
+  display:flex; align-items:center; padding:0 20px; gap:18px; z-index:1000;
+}
+.logo { font-size:14px; letter-spacing:5px; font-weight:bold; color:#00e676;
+  text-shadow:0 0 12px rgba(0,230,118,0.4); }
+.tb-sep { width:1px; height:28px; background:#0d2030; flex-shrink:0; }
+.tb-item { font-size:11px; letter-spacing:1px; display:flex; align-items:center; gap:6px; white-space:nowrap; color:#7ab8c8; }
+.dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; transition:all 0.3s; }
+.dg { background:#00e676; box-shadow:0 0 7px #00e676; }
+.dr { background:#f44336; box-shadow:0 0 7px #f44336; }
+.da { background:#ff9800; box-shadow:0 0 7px #ff9800; }
+
+/* Phase badge */
+.phase-badge { padding:5px 13px; border-radius:2px; font-size:10px; letter-spacing:2px; font-weight:bold; border:1px solid; transition:all 0.3s; }
+.ph-DOCKED    { color:#607d8b; border-color:#37474f; background:rgba(55,71,79,0.15); }
+.ph-DEPLOYING { color:#42a5f5; border-color:#42a5f5; background:rgba(66,165,245,0.12); animation:blink 1s ease-in-out infinite alternate; }
+.ph-ON_TARGET { color:#f44336; border-color:#f44336; background:rgba(244,67,54,0.12); animation:blink 0.5s ease-in-out infinite alternate; }
+.ph-RETURNING { color:#ff9800; border-color:#ff9800; background:rgba(255,152,0,0.12); }
+.ph-LANDED    { color:#00e676; border-color:#00e676; background:rgba(0,230,118,0.12); }
+
+@keyframes blink { from{opacity:1} to{opacity:0.45} }
+
+/* Signal bars */
+.bars { display:flex; gap:2px; align-items:flex-end; height:18px; }
+.bar  { width:4px; border-radius:1px; transition:all 0.4s; }
+.bon  { background:#00e676; }
+.blo  { background:#ff9800; }
+.boff { background:#0d2030; }
+
+/* ── Panel sections ── */
+.sec { padding:14px 18px; border-bottom:1px solid #0d2030; flex-shrink:0; }
+.sec-t {
+  font-size:10px; letter-spacing:3px; color:#00e676; margin-bottom:12px;
+  text-transform:uppercase; font-weight:bold; opacity:0.9;
+  border-left:2px solid #00e676; padding-left:8px;
+}
+
+/* Inputs */
+.row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.lbl { font-size:10px; color:#5a9aaa; width:52px; flex-shrink:0; font-weight:bold; letter-spacing:1px; }
+input[type=number], input[type=text] {
+  flex:1; background:#08121e; border:1px solid #0d2030; border-radius:3px;
+  color:#00e676; font-family:'Courier New',monospace; font-size:12px;
+  padding:6px 9px; outline:none; transition:border-color 0.2s;
+}
+input:focus { border-color:#00e676; box-shadow:0 0 6px rgba(0,230,118,0.15); }
+input[readonly] { color:#3a6a7a; background:#060b15; }
+input[type=range] { flex:1; accent-color:#00e676; cursor:pointer; }
+.range-val { font-size:11px; color:#5a9aaa; width:30px; text-align:right; font-weight:bold; }
+
+/* Buttons */
+.btn {
+  width:100%; padding:10px; border:1px solid; border-radius:3px; cursor:pointer;
+  font-family:'Courier New',monospace; font-size:11px; letter-spacing:2px;
+  font-weight:bold; text-transform:uppercase; transition:all 0.15s; margin-bottom:7px; display:block;
+}
+.btn:disabled { opacity:0.2; cursor:not-allowed; }
+.b-launch { color:#00e676; border-color:#00e676; background:#001f0d; }
+.b-launch:hover:not(:disabled) { background:#00e676; color:#000; box-shadow:0 0 18px #00e676; }
+.b-return { color:#ff9800; border-color:#ff9800; background:#1f0d00; }
+.b-return:hover:not(:disabled) { background:#ff9800; color:#000; box-shadow:0 0 14px #ff9800; }
+.b-jam    { color:#f44336; border-color:#f44336; background:#1f0000; }
+.b-jam:hover:not(:disabled)    { background:#f44336; color:#fff; box-shadow:0 0 18px #f44336; }
+.b-rest   { color:#42a5f5; border-color:#42a5f5; background:#000c1f; }
+.b-rest:hover:not(:disabled)   { background:#42a5f5; color:#000; box-shadow:0 0 14px #42a5f5; }
+.b-map    { color:#607d8b; border-color:#37474f; background:#060b15; font-size:10px; }
+.b-map.active { color:#00e676; border-color:#00e676; animation:blink 0.8s ease-in-out infinite alternate; }
+
+/* Progress bar */
+.prog-wrap { height:4px; background:#0d2030; border-radius:2px; margin-top:6px; }
+.prog-fill { height:100%; border-radius:2px; transition:width 0.5s, background 0.3s; }
+
+/* Metric rows */
+.m { display:flex; justify-content:space-between; align-items:center; font-size:11px; padding:6px 0; border-bottom:1px solid #080f1a; }
+.m:last-child { border-bottom:none; }
+.mk { color:#4a8a9a; letter-spacing:0.5px; font-size:10px; }
+.mv { color:#c8eef5; font-weight:bold; transition:color 0.3s; font-size:11px; }
+
+/* ── Drone cards ── */
+.dcard { padding:11px 13px; border:1px solid #0d2030; border-radius:3px; margin-bottom:8px; background:#070f1c; transition:all 0.3s; }
+.dcard.leader    { border-color:#ffd700; background:#120f00; box-shadow:0 0 10px rgba(255,215,0,0.1); }
+.dcard.candidate { border-color:#ff9800; animation:blink 0.7s ease-in-out infinite alternate; }
+.dcard-h { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.dcard-id   { font-size:12px; letter-spacing:2px; font-weight:bold; }
+.dcard-role { font-size:10px; letter-spacing:1px; font-weight:bold; }
+.dcard-pos  { font-size:10px; color:#3a6a7a; margin-bottom:6px; }
+.batbar { height:3px; background:#0d2030; border-radius:2px; }
+.batfill { height:100%; border-radius:2px; transition:width 0.5s; }
+
+/* ── Log ── */
+#log { flex:1; overflow-y:auto; padding:10px 16px; font-size:10px; line-height:2.0; min-height:0; }
+#log::-webkit-scrollbar { width:3px; }
+#log::-webkit-scrollbar-track { background:#060b15; }
+#log::-webkit-scrollbar-thumb { background:#0d2030; border-radius:2px; }
+.ll    { color:#2a4a5a; border-bottom:1px solid #080f18; padding:2px 0; }
+.ll.ev { color:#00c060; }
+.ll.w  { color:#ff9800; }
+.ll.al { color:#f44336; }
+
+/* ── Firing rings around target dot ── */
+.fire-wrap { position:relative; width:80px; height:80px; }
+.fire-ring {
+  position:absolute; border-radius:50%; border:2px solid #f44336;
+  top:50%; left:50%; transform:translate(-50%,-50%);
+  animation:fire-expand 2s ease-out infinite;
+}
+.fire-ring:nth-child(1) { animation-delay:0s; }
+.fire-ring:nth-child(2) { animation-delay:0.67s; }
+.fire-ring:nth-child(3) { animation-delay:1.33s; }
+@keyframes fire-expand {
+  0%   { width:14px; height:14px; opacity:0.9; }
+  100% { width:78px; height:78px; opacity:0; }
+}
+.fire-dot {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:14px; height:14px; border-radius:50%;
+  background:#f44336; box-shadow:0 0 10px #f44336, 0 0 22px rgba(244,67,54,0.5);
+}
+
+/* ── Election overlay ── */
+#overlay {
+  position:absolute; left:360px; right:360px; top:58px; bottom:0;
+  display:none; align-items:center; justify-content:center;
+  z-index:2000; pointer-events:none; flex-direction:column; gap:10px;
+}
+.obox {
+  padding:24px 48px; border:2px solid; text-align:center; line-height:2.4;
+  animation:blink 0.5s ease-in-out infinite alternate;
+  font-size:13px; letter-spacing:1px;
+  backdrop-filter:blur(4px);
+}
+.obox.el  { color:#ff9800; border-color:#ff9800; background:rgba(255,152,0,0.09); }
+.obox.led { color:#ffd700; border-color:#ffd700; background:rgba(255,215,0,0.09); }
+
+/* Leaflet tooltip */
+.wptip { background:rgba(5,10,20,0.96)!important; border:1px solid #0d2030!important; color:#4a8a9a!important; font-family:'Courier New',monospace!important; font-size:10px!important; padding:3px 9px!important; box-shadow:none!important; letter-spacing:1px!important; }
+.leaflet-tooltip-top::before { border-top-color:#0d2030!important; }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div id="topbar">
+  <span class="logo">▲ AERIEGUARD</span>
+  <div class="phase-badge ph-DOCKED" id="phase-badge">⬡ DOCKED</div>
+  <div class="tb-sep"></div>
+  <div class="tb-item"><div class="dot dg" id="dot-op"></div><span id="tb-op">OPERATOR ONLINE</span></div>
+  <div class="tb-sep"></div>
+  <div class="tb-item">
+    SIG
+    <span class="bars">
+      <span class="bar bon" style="height:3px"  id="b1"></span>
+      <span class="bar bon" style="height:6px"  id="b2"></span>
+      <span class="bar bon" style="height:9px"  id="b3"></span>
+      <span class="bar bon" style="height:12px" id="b4"></span>
+      <span class="bar bon" style="height:16px" id="b5"></span>
+    </span>
+    <span id="tb-sig">100%</span>
+  </div>
+  <div class="tb-item" id="tb-ldr" style="display:none;color:#ffd700">★ <span id="tb-ldr-name">—</span></div>
+  <div class="tb-item" style="margin-left:auto;color:#1e3a4a" id="tb-t">T+0s</div>
+</div>
+
+<!-- Left panel -->
+<div class="panel" id="left">
+
+  <div class="sec">
+    <div class="sec-t">Mission Control</div>
+    <div class="row">
+      <span class="lbl">BASE</span>
+      <input type="text" id="inp-base" readonly>
+    </div>
+    <div class="row">
+      <span class="lbl">TGT LAT</span>
+      <input type="number" id="inp-lat" step="0.0001">
+    </div>
+    <div class="row">
+      <span class="lbl">TGT LON</span>
+      <input type="number" id="inp-lon" step="0.0001">
+    </div>
+    <div class="row">
+      <span class="lbl">ON TGT</span>
+      <input type="range" id="inp-dur" min="10" max="120" value="30"
+             oninput="document.getElementById('dur-v').textContent=this.value+'s'">
+      <span class="range-val" id="dur-v">30s</span>
+    </div>
+    <button class="btn b-map" id="btn-map" onclick="toggleMapClick()">📍 Click Map to Set Target</button>
+    <button class="btn b-launch" id="btn-launch" onclick="launch()">🚀 LAUNCH MISSION</button>
+    <button class="btn b-return" id="btn-return" onclick="doReturn()" disabled>↩ RETURN TO BASE</button>
+    <div class="prog-wrap"><div class="prog-fill" id="prog" style="width:0%;background:#42a5f5"></div></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-t">EW Jamming Control</div>
+    <button class="btn b-jam"  id="btn-jam"  onclick="jam()">⚡ INJECT EW JAMMING</button>
+    <button class="btn b-rest" id="btn-rest" onclick="restore()" disabled>↩ RESTORE OPERATOR LINK</button>
+  </div>
+
+  <div class="sec">
+    <div class="sec-t">Link Status</div>
+    <div class="m"><span class="mk">OPERATOR</span>    <span class="mv" id="m-op">ONLINE</span></div>
+    <div class="m"><span class="mk">SIGNAL</span>      <span class="mv" id="m-sig">100%</span></div>
+    <div class="m"><span class="mk">HEARTBEAT</span>   <span class="mv" id="m-hb">2 Hz</span></div>
+    <div class="m"><span class="mk">LEADER</span>      <span class="mv" id="m-ldr">—</span></div>
+    <div class="m"><span class="mk">CONVERGENCE</span> <span class="mv" id="m-conv">—</span></div>
+  </div>
+
+  <div class="sec" style="border:none;flex:1;display:flex;flex-direction:column;padding-bottom:0;min-height:0">
+    <div class="sec-t">Event Log</div>
+    <div id="log"></div>
+  </div>
+</div>
+
+<!-- Map -->
+<div id="map"></div>
+
+<!-- Right panel -->
+<div class="panel" id="right">
+  <div class="sec">
+    <div class="sec-t">Swarm Status</div>
+    <div id="cards"></div>
+  </div>
+  <div class="sec">
+    <div class="sec-t">Formation</div>
+    <div class="m"><span class="mk">TYPE</span>     <span class="mv">TRIANGLE</span></div>
+    <div class="m"><span class="mk">ORBIT R</span>  <span class="mv" id="m-orbit">— m</span></div>
+    <div class="m"><span class="mk">SPEED</span>    <span class="mv" id="m-speed">— m/s sim</span></div>
+    <div class="m"><span class="mk">DRAIN</span>    <span class="mv" id="m-drain">— %/min</span></div>
+    <div class="m"><span class="mk">PHASE</span>    <span class="mv" id="m-phase">DOCKED</span></div>
+  </div>
+  <div class="sec">
+    <div class="sec-t">Election Parameters</div>
+    <div class="m"><span class="mk">ALGORITHM</span><span class="mv">SwarmRAFT</span></div>
+    <div class="m"><span class="mk">CRITERION</span><span class="mv">MAX BATTERY</span></div>
+    <div class="m"><span class="mk">TIE-BREAK</span><span class="mv">DRONE ID ↓</span></div>
+    <div class="m"><span class="mk">QUORUM</span>   <span class="mv" id="m-quorum">—</span></div>
+    <div class="m"><span class="mk">TIMEOUT</span>  <span class="mv" id="m-timeout">— ms</span></div>
+  </div>
+  <div class="sec" style="border:none">
+    <div class="sec-t">Research Basis</div>
+    <div style="font-size:8px;color:#1e3a4a;line-height:2">
+      SwarmRaft — Kapel Dev et al.<br>
+      IEEE IoT Journal, 2025<br>
+      Skolkovo Institute of Science<br><br>
+      Extended for EW operator link<br>
+      degradation + pre-mission offline<br>
+      state caching layer.
+    </div>
+  </div>
+</div>
+
+<!-- Election overlay -->
+<div id="overlay">
+  <div class="obox el" id="obox">
+    ⚡ ELECTION IN PROGRESS<br>
+    <span style="font-size:10px;opacity:0.7">AWAITING QUORUM — SWARMRAFT</span>
+  </div>
+</div>
+
+<script>
+// ── Map setup ──────────────────────────────────────────────────────────────────
+const map = L.map('map',{zoomControl:false,attributionControl:false}).setView([51.505,-0.113],13);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}).addTo(map);
+L.control.zoom({position:'bottomright'}).addTo(map);
+L.control.attribution({position:'bottomleft',prefix:'©OSM ©CARTO'}).addTo(map);
+
+// ── Icon factories ────────────────────────────────────────────────────────────
+function baseDeckIcon(dronesPresent) {
+  // Slot colours: lit blue when drone is docked, dim when deployed
+  const slotBg  = dronesPresent ? '#1565c0' : '#0d1e2a';
+  const slotBd  = dronesPresent ? '#1976d2' : '#0b1e2e';
+  const slotGlow = dronesPresent ? 'box-shadow:0 0 5px #1976d2;' : '';
+  const slot = (n) =>
+    `<div style="position:absolute;width:13px;height:13px;border-radius:50%;
+      background:${slotBg};border:1px solid ${slotBd};${slotGlow}
+      display:flex;align-items:center;justify-content:center;
+      font-size:7px;color:#90caf9;font-weight:bold">${n}</div>`;
+
+  return L.divIcon({
+    className:'',
+    html:`<div style="position:relative;width:60px;height:60px;border-radius:50%;
+      background:#00260f;border:2px solid #00e676;
+      box-shadow:0 0 14px rgba(0,230,118,0.35);
+      display:flex;align-items:center;justify-content:center;">
+      <!-- drone 1: top centre -->
+      <div style="position:absolute;top:5px;left:50%;transform:translateX(-50%)">
+        ${slot(1)}
+      </div>
+      <!-- drone 2: bottom-left -->
+      <div style="position:absolute;bottom:7px;left:7px">
+        ${slot(2)}
+      </div>
+      <!-- drone 3: bottom-right -->
+      <div style="position:absolute;bottom:7px;right:7px">
+        ${slot(3)}
+      </div>
+      <span style="font-size:7px;letter-spacing:1px;color:#00e676;opacity:0.7">BASE</span>
+    </div>`,
+    iconSize:[60,60],
+    iconAnchor:[30,30]
+  });
+}
+
+function tgtIcon(firing) {
+  if (firing) {
+    return L.divIcon({
+      className:'',
+      html:`<div class="fire-wrap">
+        <div class="fire-ring"></div>
+        <div class="fire-ring"></div>
+        <div class="fire-ring"></div>
+        <div class="fire-dot"></div>
+      </div>`,
+      iconSize:[80,80], iconAnchor:[40,40]
+    });
+  }
+  return L.divIcon({
+    className:'',
+    html:`<div style="width:14px;height:14px;border-radius:50%;
+      background:#f44336;
+      box-shadow:0 0 10px #f44336,0 0 22px rgba(244,67,54,0.4)"></div>`,
+    iconSize:[14,14], iconAnchor:[7,7]
+  });
+}
+
+function droneIcon(role, id) {
+  const n = id.split('_')[1];
+  const cfg = {
+    leader:    {bg:'#ffd700',bd:'#e65100',sym:'★',glow:'#ffd700'},
+    candidate: {bg:'#ff9800',bd:'#e65100',sym:n,  glow:'#ff9800'},
+    follower:  {bg:'#0d47a1',bd:'#1976d2',sym:n,  glow:'#1565c0'},
+  }[role] || {bg:'#0d47a1',bd:'#1976d2',sym:n,glow:'#1565c0'};
+  return L.divIcon({
+    className:'',
+    html:`<div style="width:36px;height:36px;border-radius:50%;
+      background:${cfg.bg};border:2px solid ${cfg.bd};
+      display:flex;align-items:center;justify-content:center;
+      font-weight:bold;font-size:14px;color:#fff;
+      font-family:'Courier New',monospace;
+      box-shadow:0 0 12px ${cfg.glow},0 0 4px rgba(0,0,0,0.9)">${cfg.sym}</div>`,
+    iconSize:[36,36], iconAnchor:[18,18]
+  });
+}
+
+// ── Map objects ───────────────────────────────────────────────────────────────
+let baseMkr=null, tgtMkr=null, flightLine=null, returnLine=null;
+const dMkrs={}, meshLines={};
+let prevFiring=false, prevDronesAtBase=null, initialized=false;
+let baseState=null;    // {lat, lon} — populated on first WS message
+let pendingTarget=null; // {lat, lon} — set when user clicks map, cleared on launch
+const PAIRS=[['drone_1','drone_2'],['drone_2','drone_3'],['drone_1','drone_3']];
+
+function pathLatLngs(pts) { return pts.map(p=>[p.lat, p.lon]); }
+
+function initMap(s) {
+  baseState = s.base;
+  baseMkr  = L.marker([s.base.lat, s.base.lon],
+               {icon:baseDeckIcon(s.drones_at_base), zIndexOffset:2000}).addTo(map);
+  tgtMkr   = L.marker([s.target.lat, s.target.lon],
+               {icon:tgtIcon(false), zIndexOffset:1500}).addTo(map);
+
+  // Curved outbound path (dashed blue)
+  flightLine = L.polyline(pathLatLngs(s.flight_path),
+    {color:'#1a4a6a', weight:1.5, dashArray:'7 5'}).addTo(map);
+
+  // Curved return path (dashed orange, hidden until RETURNING)
+  returnLine = L.polyline(pathLatLngs(s.return_path),
+    {color:'#7a4000', weight:1.5, dashArray:'5 7', opacity:0}).addTo(map);
+
+  map.fitBounds([[s.base.lat,s.base.lon],[s.target.lat,s.target.lon]],{padding:[80,80]});
+  prevDronesAtBase = s.drones_at_base;
+
+  // Seed inputs from server state (no hardcoded coords in HTML)
+  document.getElementById('inp-base').value =
+    `${s.base.lat.toFixed(5)}, ${s.base.lon.toFixed(5)}`;
+  document.getElementById('inp-lat').value  = s.target.lat.toFixed(5);
+  document.getElementById('inp-lon').value  = s.target.lon.toFixed(5);
+}
+
+function renderMap(s) {
+  // Base deck: update slots lit/dim when drones leave or return
+  if (s.drones_at_base !== prevDronesAtBase) {
+    baseMkr.setIcon(baseDeckIcon(s.drones_at_base));
+    prevDronesAtBase = s.drones_at_base;
+  }
+
+  // Target dot: swap to fire-rings while ON_TARGET
+  if (s.firing !== prevFiring) {
+    tgtMkr.setIcon(tgtIcon(s.firing));
+    prevFiring = s.firing;
+  }
+  // Use pendingTarget while user has picked a new point but not yet launched
+  const displayTarget = pendingTarget || s.target;
+  tgtMkr.setLatLng([displayTarget.lat, displayTarget.lon]);
+
+  // Bezier outbound path — skip server update while a pending target is set
+  // (keep the straight preview line drawn by the map-click handler)
+  if (!pendingTarget) {
+    flightLine.setLatLngs(pathLatLngs(s.flight_path));
+  }
+
+  // Return path: visible only while returning
+  const showReturn = s.phase === 'RETURNING';
+  returnLine.setLatLngs(pathLatLngs(s.return_path));
+  returnLine.setStyle({opacity: showReturn ? 0.7 : 0, color: '#7a4000'});
+
+  // Drone markers
+  for (const [id,d] of Object.entries(s.drones)) {
+    if (!dMkrs[id]) {
+      dMkrs[id] = L.marker([d.lat,d.lon],{icon:droneIcon(d.role,id),zIndexOffset:1000})
+        .bindTooltip(id.replace('_',' ').toUpperCase(),{direction:'top',className:'wptip'}).addTo(map);
+    } else {
+      dMkrs[id].setLatLng([d.lat,d.lon]);
+      dMkrs[id].setIcon(droneIcon(d.role,id));
+    }
+  }
+
+  // Mesh lines
+  const color = s.election_active?'#ff9800':!s.operator_online?'#ffd700':'#00e676';
+  const dash  = s.operator_online ? null : '5 5';
+  for (const [a,b] of PAIRS) {
+    const key=`${a}_${b}`;
+    const ll=[[s.drones[a].lat,s.drones[a].lon],[s.drones[b].lat,s.drones[b].lon]];
+    if (!meshLines[key]) {
+      meshLines[key]=L.polyline(ll,{color,weight:1.5,dashArray:dash,opacity:0.65}).addTo(map);
+    } else {
+      meshLines[key].setLatLngs(ll);
+      meshLines[key].setStyle({color,dashArray:dash});
+    }
+  }
+}
+
+// ── Sidebar rendering ─────────────────────────────────────────────────────────
+let elecStart=null, elecTimer=null, lastJammed=null, lastLeader=null, lastPhase=null;
+let configSeeded=false;
+
+const PHASE_LABEL = {
+  DOCKED:'⬡ DOCKED', DEPLOYING:'▶ DEPLOYING TO WARZONE',
+  ON_TARGET:'⊕ ON TARGET — ENGAGING', RETURNING:'◀ RETURNING TO BASE', LANDED:'✓ MISSION COMPLETE'
+};
+
+function sv(id,txt,col) { const e=document.getElementById(id); if(e){e.textContent=txt;if(col)e.style.color=col;} }
+
+function renderUI(s) {
+  // Populate config-driven fields once (they don't change at runtime)
+  if (!configSeeded && s.config) {
+    sv('m-orbit',   `${s.config.orbit_r_m} m on target`);
+    sv('m-speed',   `~${s.config.speed_ms} m/s sim`);
+    sv('m-drain',   `${s.config.drain_pct_min} %/min`);
+    sv('m-quorum',  s.config.quorum);
+    sv('m-timeout', `${s.config.timeout_ms} ms`);
+    configSeeded = true;
+  }
+
+  // Phase badge
+  const b=document.getElementById('phase-badge');
+  b.className=`phase-badge ph-${s.phase}`;
+  b.textContent=PHASE_LABEL[s.phase]||s.phase;
+  sv('m-phase',s.phase,'#00e676');
+
+  // Buttons
+  const docked = s.phase==='DOCKED'||s.phase==='LANDED';
+  const flying = s.phase==='DEPLOYING'||s.phase==='ON_TARGET';
+  document.getElementById('btn-launch').disabled=!docked;
+  document.getElementById('btn-return').disabled=!flying;
+
+  // Flight progress bar
+  const pf=document.getElementById('prog');
+  if(s.phase==='DEPLOYING'||s.phase==='RETURNING'){
+    pf.style.width=`${Math.round(s.flight_progress*100)}%`;
+    pf.style.background=s.phase==='RETURNING'?'#ff9800':'#42a5f5';
+  } else if(s.phase==='ON_TARGET'){
+    pf.style.width='100%'; pf.style.background='#f44336';
+  } else { pf.style.width='0%'; }
+
+  // Signal bars
+  const sig=s.signal_pct;
+  const bc=sig>60?'bon':sig>20?'blo':'boff';
+  [20,40,60,80,95].forEach((t,i)=>{
+    document.getElementById(`b${i+1}`).className=`bar ${sig>=t?bc:'boff'}`;
+  });
+  sv('tb-sig',`${Math.round(sig)}%`);
+  sv('m-sig', `${Math.round(sig)}%`);
+
+  // Operator status
+  const dot=document.getElementById('dot-op'), top=document.getElementById('tb-op');
+  if(s.operator_online){
+    dot.className='dot dg'; top.textContent='OPERATOR ONLINE';
+    sv('m-op','ONLINE','#00e676'); sv('m-hb','2 Hz','#00e676');
+  } else if(s.election_active){
+    dot.className='dot dr'; top.textContent='⚡ EW JAMMING';
+    sv('m-op','JAMMED','#f44336'); sv('m-hb','0 Hz','#f44336');
+  } else {
+    dot.className='dot da'; top.textContent='★ AUTONOMOUS';
+    sv('m-op','OFFLINE','#ff9800'); sv('m-hb','—','#ff9800');
+  }
+
+  // Leader badge
+  const ldrEl=document.getElementById('tb-ldr');
+  if(s.leader){
+    ldrEl.style.display='flex';
+    document.getElementById('tb-ldr-name').textContent=s.leader.replace('_',' ').toUpperCase();
+    sv('m-ldr',s.leader.replace('_',' ').toUpperCase(),'#ffd700');
+  } else {
+    ldrEl.style.display='none';
+    sv('m-ldr','—','#2a4a5a');
+  }
+  sv('tb-t',`T+${Math.floor(s.elapsed_s)}s`);
+
+  // Election overlay
+  const ov=document.getElementById('overlay'), ob=document.getElementById('obox');
+  if(s.election_active){
+    ov.style.display='flex'; ob.className='obox el';
+    ob.innerHTML='⚡ ELECTION IN PROGRESS<br><span style="font-size:10px;opacity:0.7">AWAITING QUORUM — SWARMRAFT</span>';
+    if(!elecStart){
+      elecStart=Date.now();
+      // Auto-dismiss after 10s if no leader emerges (e.g. ROS2 nodes not running)
+      elecTimer=setTimeout(()=>{
+        ob.className='obox el';
+        ob.innerHTML='⚡ NO QUORUM REACHED<br><span style="font-size:10px;opacity:0.7">DRONES HOLDING LAST POSITION</span>';
+        setTimeout(()=>{ov.style.display='none';},3000);
+        elecStart=null; elecTimer=null;
+      },10000);
+    }
+  } else if(s.leader&&!s.operator_online){
+    if(elecTimer){clearTimeout(elecTimer);elecTimer=null;}
+    const conv=elecStart?(Date.now()-elecStart):null;
+    elecStart=null;
+    if(conv!==null) sv('m-conv',`${conv}ms`,conv<3000?'#00e676':'#f44336');
+    ob.className='obox led';
+    const convTxt=conv!==null?`CONVERGENCE: ${conv}ms · `:'';
+    ob.innerHTML=`★ LEADER ELECTED — ${s.leader.replace('_',' ').toUpperCase()}<br>
+      <span style="font-size:11px;opacity:0.8">${convTxt}MISSION AUTONOMOUS</span>`;
+    ov.style.display='flex';
+    setTimeout(()=>{ov.style.display='none';},6000);
+  } else if(s.operator_online){
+    if(elecTimer){clearTimeout(elecTimer);elecTimer=null;}
+    ov.style.display='none'; elecStart=null;
+  }
+
+  // Drone cards
+  const cards=document.getElementById('cards'); cards.innerHTML='';
+  for(const [id,d] of Object.entries(s.drones)){
+    const isL=d.role==='leader', isC=d.role==='candidate';
+    const rc=isL?'#ffd700':isC?'#ff9800':'#42a5f5';
+    const rl=isL?'★ LEADER':isC?'⚡ ELECTING':'● FOLLOWER';
+    const bc=d.battery_pct>50?'#00e676':d.battery_pct>20?'#ff9800':'#f44336';
+    cards.innerHTML+=`<div class="dcard ${d.role}">
+      <div class="dcard-h">
+        <span class="dcard-id" style="color:${rc}">${id.replace('_',' ').toUpperCase()}</span>
+        <span class="dcard-role" style="color:${rc}">${rl}</span>
+      </div>
+      <div class="dcard-pos">BAT <span style="color:${bc}">${d.battery_pct}%</span> · ${d.lat.toFixed(4)}, ${d.lon.toFixed(4)}</div>
+      <div class="batbar"><div class="batfill" style="width:${d.battery_pct}%;background:${bc}"></div></div>
+    </div>`;
+  }
+
+  // Event log on phase transitions
+  if(lastPhase!==s.phase){
+    const msgs={DEPLOYING:'▶ Drones launched — deploying to warzone',ON_TARGET:'⊕ On target — engagement active',RETURNING:'◀ Mission complete — returning to base',LANDED:'✓ Drones landed — mission concluded'};
+    if(msgs[s.phase]) addLog(msgs[s.phase],s.phase==='ON_TARGET'?'al':s.phase==='RETURNING'?'w':'ev');
+    lastPhase=s.phase;
+  }
+  if(lastJammed===false&&!s.operator_online) addLog('⚡ EW jamming injected — heartbeat stopped','al');
+  if(lastJammed===true&&s.operator_online)   addLog('↩ Operator link restored — handback complete','ev');
+  if(!lastLeader&&s.leader)                  addLog(`★ Leader elected: ${s.leader}`,'w');
+  if(lastLeader&&!s.leader&&s.operator_online) addLog('Leader stepped down — operator resumed','ev');
+  lastJammed=!s.operator_online; lastLeader=s.leader;
+}
+
+function addLog(msg,cls=''){
+  const feed=document.getElementById('log');
+  const t=new Date().toTimeString().slice(0,8);
+  const d=document.createElement('div');
+  d.className=`ll ${cls}`; d.textContent=`[${t}] ${msg}`;
+  feed.insertBefore(d,feed.firstChild);
+  while(feed.children.length>80) feed.removeChild(feed.lastChild);
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+function connect(){
+  const ws=new WebSocket(`ws://${location.host}/ws`);
+  ws.onmessage=e=>{
+    const s=JSON.parse(e.data);
+    if(!initialized){
+      initMap(s); initialized=true;
+      addLog('AerieGuard dashboard online','ev');
+      addLog('3 drone agents standing by at base','ev');
+      addLog('Set target coordinates and click LAUNCH','ev');
+    }
+    renderMap(s); renderUI(s);
+  };
+  ws.onclose=()=>setTimeout(connect,1000);
+}
+connect();
+
+// ── Map-click target setting ──────────────────────────────────────────────────
+let clickMode=false;
+
+function toggleMapClick(){
+  clickMode=!clickMode;
+  const btn=document.getElementById('btn-map');
+  btn.className='btn b-map'+(clickMode?' active':'');
+  btn.textContent=clickMode?'🎯 Click anywhere on map...':'📍 Click Map to Set Target';
+  map.getContainer().style.cursor=clickMode?'crosshair':'';
+}
+
+map.on('click',e=>{
+  if(!clickMode) return;
+  const lat=e.latlng.lat, lon=e.latlng.lng;
+  pendingTarget = {lat, lon};
+  document.getElementById('inp-lat').value=lat.toFixed(5);
+  document.getElementById('inp-lon').value=lon.toFixed(5);
+  if(tgtMkr) tgtMkr.setLatLng([lat,lon]);
+  // Preview straight line — server will replace with bezier after launch
+  if(flightLine && baseState)
+    flightLine.setLatLngs([[baseState.lat,baseState.lon],[lat,lon]]);
+  toggleMapClick();
+  addLog(`Target set: ${lat.toFixed(5)}, ${lon.toFixed(5)}`,'ev');
+});
+
+// ── Mission controls ──────────────────────────────────────────────────────────
+function launch(){
+  const lat=parseFloat(document.getElementById('inp-lat').value);
+  const lon=parseFloat(document.getElementById('inp-lon').value);
+  const dur=parseInt(document.getElementById('inp-dur').value);
+  if(isNaN(lat)||isNaN(lon)){addLog('Invalid coordinates','al');return;}
+  fetch('/api/launch',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({target_lat:lat,target_lon:lon,on_target_s:dur})})
+    .then(r=>r.json()).then(d=>{
+      pendingTarget=null; // server now owns the target coords
+      addLog(`Mission launched — ETA ${d.flight_s}s to warzone`,'ev');
+    });
+}
+
+function doReturn(){
+  fetch('/api/return',{method:'POST'}).then(()=>addLog('◀ Return to base ordered','w'));
+}
+
+function jam(){
+  fetch('/api/jam',{method:'POST'});
+  document.getElementById('btn-jam').disabled=true;
+  document.getElementById('btn-rest').disabled=false;
+  addLog('⚡ EW jamming injected via operator panel','al');
+}
+
+function restore(){
+  fetch('/api/restore',{method:'POST'});
+  document.getElementById('btn-jam').disabled=false;
+  document.getElementById('btn-rest').disabled=true;
+  addLog('↩ Restore link command sent','ev');
+}
+</script>
+</body>
+</html>
