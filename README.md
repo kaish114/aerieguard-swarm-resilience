@@ -8,9 +8,7 @@ A full-stack prototype demonstrating how autonomous drone swarms maintain missio
 
 ## Demo
 
-<!-- To host the video: open a new GitHub Issue, drag-and-drop the .mov into the comment box,
-     copy the generated URL, paste it below, then close the issue without submitting. -->
-> 📹 **[Watch the full simulation demo](#)**  ← _replace `#` with the GitHub video URL_
+[![AerieGuard Swarm Resilience Demo](https://img.youtube.com/vi/jGyZzXOmsFE/maxresdefault.jpg)](https://youtu.be/jGyZzXOmsFE)
 
 ### Drones deploying in triangle formation
 
