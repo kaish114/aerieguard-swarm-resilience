@@ -3,17 +3,17 @@ import os
 import sys
 import threading
 
-import rclpy
-from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped
-from sensor_msgs.msg import BatteryState
-from std_msgs.msg import String
+import rclpy  # type: ignore[import-untyped]
+from rclpy.node import Node  # type: ignore[import-untyped]
+from geometry_msgs.msg import PoseStamped  # type: ignore[import-untyped]
+from sensor_msgs.msg import BatteryState  # type: ignore[import-untyped]
+from std_msgs.msg import String  # type: ignore[import-untyped]
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../../../.."))
-from consensus.raft import RaftNode
-from consensus.heartbeat_monitor import HeartbeatMonitor
-from mission.progress_tracker import ProgressTracker
-from swarm_resilience.mission_loader import load_mission, get_timeout_ms, get_min_quorum
+from consensus.raft import RaftNode  # type: ignore[import-untyped]
+from consensus.heartbeat_monitor import HeartbeatMonitor  # type: ignore[import-untyped]
+from mission.progress_tracker import ProgressTracker  # type: ignore[import-untyped]
+from swarm_resilience.mission_loader import load_mission, get_timeout_ms, get_min_quorum  # type: ignore[import-untyped]
 
 
 class DroneAgent(Node):
@@ -114,7 +114,7 @@ class DroneAgent(Node):
         with self._state_lock:
             self._state["battery_pct"] = msg.percentage * 100.0
 
-    def _on_operator_heartbeat(self, _msg: String) -> None:
+    def _on_operator_heartbeat(self, _: String) -> None:
         self._hb_monitor.record_heartbeat()
 
     def _on_heartbeat_timeout(self) -> None:
