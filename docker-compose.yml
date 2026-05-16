@@ -1,0 +1,40 @@
+version: '3'
+services:
+  px4_drone_1:
+    image: px4io/px4-dev-simulation-focal:latest
+    platform: linux/amd64
+    environment:
+      - PX4_SIM_HOST_ADDR=host.docker.internal
+    ports:
+      - "14540:14540/udp"
+      - "14550:14550/udp"
+    command: >
+      bash -c "cd /px4 && make px4_sitl gazebo
+               HEADLESS=1 PX4_GZ_MODEL_POSE='0,0,0,0,0,0'"
+    restart: "no"
+
+  px4_drone_2:
+    image: px4io/px4-dev-simulation-focal:latest
+    platform: linux/amd64
+    environment:
+      - PX4_SIM_HOST_ADDR=host.docker.internal
+    ports:
+      - "14541:14540/udp"
+      - "14551:14550/udp"
+    command: >
+      bash -c "cd /px4 && make px4_sitl gazebo
+               HEADLESS=1 PX4_GZ_MODEL_POSE='10,0,0,0,0,0'"
+    restart: "no"
+
+  px4_drone_3:
+    image: px4io/px4-dev-simulation-focal:latest
+    platform: linux/amd64
+    environment:
+      - PX4_SIM_HOST_ADDR=host.docker.internal
+    ports:
+      - "14542:14540/udp"
+      - "14552:14550/udp"
+    command: >
+      bash -c "cd /px4 && make px4_sitl gazebo
+               HEADLESS=1 PX4_GZ_MODEL_POSE='5,8,0,0,0,0'"
+    restart: "no"
