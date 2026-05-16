@@ -6,6 +6,14 @@ A full-stack prototype demonstrating how autonomous drone swarms maintain missio
 
 ---
 
+## Motivation
+
+Seeing Systems' field reports from Operation Osprey and Operation Kull both flagged the same bottleneck — not hardware, but operator cognitive load and interface complexity. Aerie solves that. But Aerie's coordination depends on the operator link staying up.
+
+In EW-heavy theatres, that link will be jammed. Current MAVLink-based swarms respond to link loss with RTL or hover-and-wait — mission abort. AerieGuard demonstrates the alternative: treat link degradation as a first-class operating state, not an exception. Each drone caches full mission state before launch. When the link drops, the swarm elects a coordinator and continues autonomously. When the link restores, control hands back cleanly.
+
+---
+
 ## Demo
 
 [![AerieGuard Swarm Resilience Demo](https://img.youtube.com/vi/jGyZzXOmsFE/maxresdefault.jpg)](https://youtu.be/jGyZzXOmsFE)
@@ -221,7 +229,7 @@ From convergence benchmarks across multiple election runs:
 | Metric | Value |
 |---|---|
 | Median convergence | ~500 ms |
-| Max observed | ~2500 ms |
+| Max observed | ~2500 ms (ZMQ slow-joiner: one drone subscribes after peers already broadcast; fixed with repeat-announce every 100 ms across the 500 ms collection window — worst case is now bounded by window duration, not message loss) |
 | Quorum required | 2 / 3 drones |
 | False elections (pre-first-heartbeat) | 0 (armed flag prevents them) |
 
