@@ -8,15 +8,19 @@ A full-stack prototype demonstrating how autonomous drone swarms maintain missio
 
 ## Demo
 
-<!-- Replace with your recorded video link once uploaded -->
-> 📹 **[Watch the full simulation demo](#)**
+<!-- To host the video: open a new GitHub Issue, drag-and-drop the .mov into the comment box,
+     copy the generated URL, paste it below, then close the issue without submitting. -->
+> 📹 **[Watch the full simulation demo](#)**  ← _replace `#` with the GitHub video URL_
 
-<!-- Add screenshots here -->
-<!--
-![Dashboard — drones deploying](docs/screenshots/deploying.png)
-![Election in progress](docs/screenshots/election.png)
-![Leader elected — drone_1](docs/screenshots/leader_elected.png)
--->
+### Drones deploying in triangle formation
+
+![Drones deploying — arc path to warzone](docs/screenshots/deploying-1.png)
+
+![Drones on route — triangle formation visible](docs/screenshots/deploying-2.png)
+
+### SwarmRAFT election triggered by EW jamming
+
+![Election in progress — operator link severed](docs/screenshots/election.png)
 
 ---
 
