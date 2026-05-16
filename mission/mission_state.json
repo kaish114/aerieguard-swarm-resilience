@@ -1,0 +1,23 @@
+{
+  "mission_id": "aerie_demo_001",
+  "version": 1,
+  "created_at": 1716123400,
+  "waypoints": [
+    {"index": 0, "lat": 51.5074, "lon": -0.1278, "alt_m": 50, "hold_s": 2},
+    {"index": 1, "lat": 51.5080, "lon": -0.1265, "alt_m": 50, "hold_s": 2},
+    {"index": 2, "lat": 51.5090, "lon": -0.1250, "alt_m": 50, "hold_s": 2},
+    {"index": 3, "lat": 51.5095, "lon": -0.1235, "alt_m": 50, "hold_s": 5}
+  ],
+  "formation": {
+    "type": "triangle",
+    "spacing_m": 10,
+    "reference_drone": "drone_1"
+  },
+  "abort_policy": "hold_position",
+  "heartbeat_timeout_ms": 2000,
+  "coordination_rules": {
+    "leader_fallback_criterion": "highest_battery",
+    "rejoin_on_restore": true,
+    "min_election_quorum": 2
+  }
+}
