@@ -82,10 +82,13 @@ class RaftNode:
         poller = zmq.Poller()
         poller.register(self._sub, zmq.POLLIN)
         while not self._stop.is_set():
-            events = dict(poller.poll(timeout=100))
-            if self._sub in events:
-                raw = self._sub.recv_string()
-                self._msg_queue.put(json.loads(raw))
+            try:
+                events = dict(poller.poll(timeout=100))
+                if self._sub in events:
+                    raw = self._sub.recv_string()
+                    self._msg_queue.put(json.loads(raw))
+            except zmq.ZMQError:
+                break
 
     def _drain_queue(self) -> None:
         while not self._msg_queue.empty():

@@ -2,8 +2,6 @@ import threading
 import time
 from typing import List, Optional
 
-import pytest
-
 from consensus.raft import RaftNode, Role, _pick_leader
 
 
