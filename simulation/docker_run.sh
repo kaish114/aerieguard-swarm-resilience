@@ -7,11 +7,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 CMD="${1:-bash}"
 
+# On macOS, Docker containers reach XQuartz via TCP, not the Unix socket.
+# XQuartz must have "Allow connections from network clients" enabled in Preferences → Security.
+/opt/X11/bin/xhost +localhost 2>/dev/null || true
+
 docker run -it --rm \
   --network host \
-  -e DISPLAY=:0 \
+  -e DISPLAY=host.docker.internal:0 \
   -e PYTHONPATH=/ws \
-  -v /tmp/.X11-unix:/tmp/.X11-unix \
   -v "$REPO_ROOT":/ws \
   -v /tmp:/tmp \
   osrf/ros:humble-desktop \
