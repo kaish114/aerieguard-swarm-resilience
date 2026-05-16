@@ -35,14 +35,14 @@ class DroneAgent(Node):
         super().__init__("drone_agent")
 
         self.declare_parameter("drone_id", "drone_1")
-        self.declare_parameter("peer_ids", ["drone_2", "drone_3"])
         self.declare_parameter("mission_path", "mission/mission_state.json")
-        self.declare_parameter("progress_path", "/tmp/progress.json")
 
         self._drone_id: str = self.get_parameter("drone_id").value
-        peer_ids: list = self.get_parameter("peer_ids").value
         mission_path: str = self.get_parameter("mission_path").value
-        progress_path: str = self.get_parameter("progress_path").value
+        progress_path: str = f"/tmp/progress_{self._drone_id}.json"
+
+        all_drones = ["drone_1", "drone_2", "drone_3"]
+        peer_ids = [d for d in all_drones if d != self._drone_id]
 
         mission = load_mission(mission_path)
         timeout_ms = get_timeout_ms(mission)
