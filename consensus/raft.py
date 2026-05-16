@@ -127,7 +127,7 @@ class RaftNode:
     def start_election(self) -> Optional[str]:
         """
         Trigger election. Returns elected leader_id on success, None if quorum
-        not reached within ELECTION_TIMEOUT_S.
+        not reached. Completes in approximately COLLECTION_WINDOW_S seconds.
         """
         with self._lock:
             self.current_term += 1
@@ -173,6 +173,13 @@ class RaftNode:
 
         if self.on_leader_change:
             self.on_leader_change(term, leader_id)
+
+        # Write leader file for scenario.py convergence detection
+        try:
+            import pathlib
+            pathlib.Path("/tmp/swarm_leader.txt").write_text(leader_id)
+        except OSError:
+            pass
 
         return leader_id
 

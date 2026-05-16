@@ -23,6 +23,7 @@ def broadcast_mission(mission_state_path: str, bind_address: str = "*") -> None:
         time.sleep(SEND_INTERVAL_S)
 
     print(f"[broadcaster] Mission state broadcast complete from {mission_state_path}")
+    sock.setsockopt(zmq.LINGER, 0)
     sock.close()
     ctx.term()
 
