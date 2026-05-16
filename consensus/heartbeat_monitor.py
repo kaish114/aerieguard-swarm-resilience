@@ -26,6 +26,7 @@ class HeartbeatMonitor:
 
         self._last_heartbeat = time.monotonic()
         self._timed_out = False
+        self._armed = False  # don't timeout until first heartbeat received
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
@@ -33,6 +34,7 @@ class HeartbeatMonitor:
     def record_heartbeat(self) -> None:
         with self._lock:
             self._last_heartbeat = time.monotonic()
+            self._armed = True
             if self._timed_out:
                 self._timed_out = False
                 restore = True
@@ -55,7 +57,7 @@ class HeartbeatMonitor:
             self._stop.wait(self.POLL_INTERVAL_S)
             with self._lock:
                 elapsed = time.monotonic() - self._last_heartbeat
-                should_fire = elapsed >= self.timeout_s and not self._timed_out
+                should_fire = self._armed and elapsed >= self.timeout_s and not self._timed_out
                 if should_fire:
                     self._timed_out = True
             if should_fire:
