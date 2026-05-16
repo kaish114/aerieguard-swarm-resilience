@@ -1,0 +1,14 @@
+{
+  "pythonVersion": "3.11",
+  "extraPaths": [
+    ".",
+    "ros2_ws/src/swarm_resilience"
+  ],
+  "ignore": [
+    "ros2_ws/src/swarm_resilience/swarm_resilience/drone_agent.py",
+    "ros2_ws/src/swarm_resilience/swarm_resilience/operator_node.py",
+    "ros2_ws/src/swarm_resilience/swarm_resilience/swarm_monitor.py"
+  ],
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none"
+}
