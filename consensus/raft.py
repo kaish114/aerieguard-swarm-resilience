@@ -3,7 +3,7 @@ import queue
 import threading
 import time
 from enum import Enum
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List, Optional
 import zmq
 
 BASE_PORT = 5600
