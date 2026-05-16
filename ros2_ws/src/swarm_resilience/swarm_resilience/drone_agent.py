@@ -9,7 +9,7 @@ from geometry_msgs.msg import PoseStamped  # type: ignore[import-untyped]
 from sensor_msgs.msg import BatteryState  # type: ignore[import-untyped]
 from std_msgs.msg import String  # type: ignore[import-untyped]
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../../../.."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
 from consensus.raft import RaftNode  # type: ignore[import-untyped]
 from consensus.heartbeat_monitor import HeartbeatMonitor  # type: ignore[import-untyped]
 from mission.progress_tracker import ProgressTracker  # type: ignore[import-untyped]

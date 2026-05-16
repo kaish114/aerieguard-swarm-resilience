@@ -7,7 +7,7 @@ import rclpy  # type: ignore[import-untyped]
 from rclpy.node import Node  # type: ignore[import-untyped]
 from std_msgs.msg import String  # type: ignore[import-untyped]
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../../../.."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
 from mission.broadcaster import broadcast_mission  # type: ignore[import-untyped]
 from swarm_resilience.mission_loader import load_mission  # type: ignore[import-untyped]
 

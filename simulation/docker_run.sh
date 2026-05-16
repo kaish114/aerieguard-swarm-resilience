@@ -10,6 +10,7 @@ CMD="${1:-bash}"
 docker run -it --rm \
   --network host \
   -e DISPLAY=:0 \
+  -e PYTHONPATH=/ws \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
   -v "$REPO_ROOT":/ws \
   -v /tmp:/tmp \
