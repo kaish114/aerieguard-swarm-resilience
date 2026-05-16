@@ -50,7 +50,7 @@ class SwarmMonitor(Node):
         except json.JSONDecodeError:
             pass
 
-    def _on_election_result(self, _drone_id: str, msg: String) -> None:
+    def _on_election_result(self, _: str, msg: String) -> None:
         try:
             data = json.loads(msg.data)
             leader = data.get("leader_id", "")
