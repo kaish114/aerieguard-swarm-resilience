@@ -10,9 +10,8 @@ import json
 import os
 import signal
 import subprocess
-import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -31,7 +30,7 @@ def _save_result(run_id: str, inject_at: float, election_complete_at: float | No
     results = _load_results()
     entry = {
         "run_id": run_id,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "link_loss_injected_at_s": inject_at,
         "election_complete_at_s": election_complete_at,
         "convergence_time_ms": round((election_complete_at - inject_at) * 1000, 1)
