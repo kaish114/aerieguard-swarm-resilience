@@ -18,7 +18,7 @@ def broadcast_mission(mission_state_path: str, bind_address: str = "*") -> None:
     with open(mission_state_path) as f:
         payload = f.read()
 
-    for i in range(SEND_REPEATS):
+    for _ in range(SEND_REPEATS):
         sock.send_string(payload)
         time.sleep(SEND_INTERVAL_S)
 
